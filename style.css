@@ -63,3 +63,65 @@ nav a:hover {
   display: inline-block;
   margin-top: 15px;
 }
+/* 4. Tarjetas de beneficios */
+.features {
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.grid {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+}
+
+.card {
+  background-color: #ffffff;
+  border: 1px solid #cccccc;
+  padding: 20px;
+  width: 300px;
+  border-radius: 5px;
+}
+
+.card h3 {
+  color: #0056b3;
+}
+
+/* 5. Formulario de contacto */
+.contact {
+  background-color: #ffffff;
+  width: 400px;
+  margin: 0 auto 50px auto;
+  padding: 30px;
+  border: 1px solid #cccccc;
+  border-radius: 5px;
+}
+
+.contact label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+
+.contact input {
+  width: 90%;
+  padding: 10px;
+  margin-bottom: 20px;
+  border: 1px solid #999999;
+}
+
+.contact button {
+  background-color: #0056b3;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  cursor: pointer;
+}
+
+/* 6. Pie de pagina */
+footer {
+  background-color: #333333;
+  color: white;
+  text-align: center;
+  padding: 20px;
+}
