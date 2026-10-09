@@ -43,3 +43,23 @@ nav a {
 nav a:hover {
   color: #0056b3;
 }
+/* 3. Seccion principal Hero */
+.hero {
+  background-color: #e6f0fa;
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.hero h1 {
+  color: #0056b3;
+}
+
+.btn {
+  background-color: #0056b3;
+  color: white;
+  padding: 12px 25px;
+  text-decoration: none;
+  border-radius: 5px;
+  display: inline-block;
+  margin-top: 15px;
+}
