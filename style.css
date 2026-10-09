@@ -6,3 +6,40 @@ body {
   margin: 0;
   padding: 0;
 }
+/* 2. Encabezado y Navegación */
+header {
+  background-color: #ffffff;
+  padding: 20px;
+  border-bottom: 3px solid #0056b3;
+  text-align: center;
+}
+
+header h2 {
+  margin: 0;
+  color: #0056b3;
+}
+
+header span {
+  color: #ff9900;
+}
+
+nav ul {
+  list-style-type: none;
+  padding: 0;
+  margin-top: 15px;
+}
+
+nav li {
+  display: inline-block;
+  margin-right: 20px;
+}
+
+nav a {
+  text-decoration: none;
+  color: #333333;
+  font-weight: bold;
+}
+
+nav a:hover {
+  color: #0056b3;
+}
