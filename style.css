@@ -202,3 +202,28 @@ footer {
   text-align: center;
   padding: 20px;
 }
+
+/* 8. Diseno Responsive para pantallas moviles */
+@media (max-width: 600px) {
+  nav li {
+    display: block;
+    margin: 10px 0;
+  }
+
+  .grid {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .card {
+    width: 90%;
+  }
+
+  .contact {
+    width: 90%;
+  }
+
+  .assistant {
+    width: 90%;
+  }
+}
