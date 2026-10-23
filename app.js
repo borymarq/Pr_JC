@@ -3,16 +3,65 @@ const contactForm = document.getElementById('contact-form');
 
 // 2. Escuchamos el evento cuando el usuario presiona "Enviar"
 contactForm.addEventListener('submit', function (event) {
-  // Evitamos que la página se recargue automáticamente (comportamiento por defecto)
+  // Evitamos que la página se recargue automáticamente
   event.preventDefault();
 
-  // Obtenemos los valores que el usuario escribió en los campos
-  const nameValue = document.getElementById('name').value;
-  const emailValue = document.getElementById('email').value;
+  // Obtenemos los valores de los campos
+  const nameValue = document.getElementById('name').value.trim();
+  const emailValue = document.getElementById('email').value.trim().toLowerCase();
 
-  // Mostramos un mensaje de confirmación en pantalla
-  alert('¡Gracias ' + nameValue + '! Hemos recibido tu correo (' + emailValue + '). Pronto te contactaremos para tu clase demo.');
+  // 3. Validación básica de formato de correo
+  // Verificamos que tenga una '@' y que termine en un dominio conocido
+  const tieneArroba = emailValue.includes('@');
+  const esDominioValido = 
+    emailValue.endsWith('@gmail.com') || 
+    emailValue.endsWith('@hotmail.com') || 
+    emailValue.endsWith('@outlook.com') || 
+    emailValue.endsWith('@yahoo.com') ||
+    emailValue.endsWith('.edu.ec'); // Dominio universitario típico
 
-  // Limpiamos los campos del formulario
+  if (!tieneArroba || !esDominioValido) {
+    alert('Error: Por favor ingresa un correo válido (@gmail.com, @hotmail.com, @outlook.com, etc.).');
+    return; // El "return" detiene la ejecución; el código de abajo no se ejecuta
+  }
+
+  // Si pasó la validación, mostramos el éxito
+  alert('¡Gracias ' + nameValue + '! Correo verificado (' + emailValue + '). Pronto te contactaremos.');
+
+  // Limpiamos los campos
   contactForm.reset();
+});
+
+// ===============================
+// Lógica del Asistente de Consulta
+// ===============================
+
+const chatForm = document.getElementById('chat-form');
+const userQueryInput = document.getElementById('user-query');
+const chatMessages = document.getElementById('chat-messages');
+
+chatForm.addEventListener('submit', function (event) {
+  event.preventDefault();
+
+  const queryText = userQueryInput.value.trim();
+  if (queryText === '') return;
+
+  // 1. Mostrar la pregunta del usuario en pantalla
+  const userMessageElement = document.createElement('p');
+  userMessageElement.className = 'user-msg';
+  userMessageElement.innerHTML = '<strong>Tú:</strong> ' + queryText;
+  chatMessages.appendChild(userMessageElement);
+
+  // 2. Limpiar la caja de texto
+  userQueryInput.value = '';
+
+  // 3. Simulación de respuesta inmediata (mientras conectamos el backend)
+  const botMessageElement = document.createElement('p');
+  botMessageElement.className = 'bot-msg';
+  botMessageElement.innerHTML = '<strong>Asistente:</strong> Consulta recibida sobre "' + queryText + '". En la siguiente fase responderé conectándome a la API.';
+  
+  chatMessages.appendChild(botMessageElement);
+
+  // Auto-scroll hacia el último mensaje
+  chatMessages.scrollTop = chatMessages.scrollHeight;
 });
