@@ -118,7 +118,70 @@ nav a:hover {
   cursor: pointer;
 }
 
-/* 6. Pie de pagina */
+/* 6. Asistente de consultas */
+.assistant {
+  max-width: 500px;
+  margin: 30px auto;
+  padding: 20px;
+  text-align: center;
+}
+
+.assistant h2 {
+  color: #0056b3;
+  margin-bottom: 5px;
+}
+
+.chat-box {
+  background-color: #ffffff;
+  border: 1px solid #cccccc;
+  border-radius: 5px;
+  padding: 15px;
+  margin-top: 15px;
+  text-align: left;
+}
+
+.chat-messages {
+  height: 160px;
+  overflow-y: auto; /* Permite scroll si hay muchos mensajes */
+  border: 1px solid #eeeeee;
+  background-color: #fafafa;
+  padding: 10px;
+  margin-bottom: 15px;
+}
+
+.chat-messages p {
+  margin: 8px 0;
+  font-size: 0.95rem;
+}
+
+.user-msg {
+  color: #0056b3;
+}
+
+.bot-msg {
+  color: #333333;
+}
+
+.chat-input-area {
+  display: flex;
+  gap: 10px;
+}
+
+.chat-input-area input {
+  flex: 1;
+  padding: 8px;
+  border: 1px solid #999999;
+}
+
+.chat-input-area button {
+  background-color: #0056b3;
+  color: white;
+  border: none;
+  padding: 8px 15px;
+  cursor: pointer;
+}
+
+/* 7. Pie de pagina */
 footer {
   background-color: #333333;
   color: white;
