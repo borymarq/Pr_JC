@@ -257,3 +257,13 @@ footer {
   color: #666666;
   margin-bottom: 15px;
 }
+
+/* Oculta el login de la vista principal */
+.login-section {
+  display: none;
+}
+
+/* Clase para mostrarlo cuando se active */
+.login-section.activo {
+  display: block;
+}

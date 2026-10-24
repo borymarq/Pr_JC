@@ -67,11 +67,29 @@ chatForm.addEventListener('submit', function (event) {
 });
 
 // ===============================
-// Lógica de Inicio de Sesión (Login)
+// Alternar Vista de Login
 // ===============================
 
-const loginForm = document.getElementById('login-form');
+const navLoginBtn = document.querySelector('.nav-login');
+const loginSection = document.getElementById('login');
+const mainSections = document.querySelectorAll('main > section:not(#login)');
 
+// Al hacer clic en el botón del menú
+navLoginBtn.addEventListener('click', function (event) {
+  event.preventDefault();
+
+  // Ocultamos las demás secciones de la landing
+  mainSections.forEach(section => {
+    section.style.display = 'none';
+  });
+
+  // Mostramos únicamente la caja de Login
+  loginSection.classList.add('activo');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
+// Captura del envío del formulario
+const loginForm = document.getElementById('login-form');
 loginForm.addEventListener('submit', function (event) {
   event.preventDefault();
 
@@ -83,7 +101,6 @@ loginForm.addEventListener('submit', function (event) {
     return;
   }
 
-  // Mensaje simulado de autenticacion mientras conectamos la base de datos
-  alert('Intentando conectar con el servidor para autenticar a: ' + email);
+  alert('Credenciales enviadas para validación: ' + email);
   loginForm.reset();
 });
