@@ -65,3 +65,25 @@ chatForm.addEventListener('submit', function (event) {
   // Auto-scroll hacia el último mensaje
   chatMessages.scrollTop = chatMessages.scrollHeight;
 });
+
+// ===============================
+// Lógica de Inicio de Sesión (Login)
+// ===============================
+
+const loginForm = document.getElementById('login-form');
+
+loginForm.addEventListener('submit', function (event) {
+  event.preventDefault();
+
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value.trim();
+
+  if (email === '' || password === '') {
+    alert('Por favor completa todos los campos.');
+    return;
+  }
+
+  // Mensaje simulado de autenticacion mientras conectamos la base de datos
+  alert('Intentando conectar con el servidor para autenticar a: ' + email);
+  loginForm.reset();
+});
