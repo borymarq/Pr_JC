@@ -227,3 +227,33 @@ footer {
     width: 90%;
   }
 }
+
+/* Estilos para el enlace de Login en la barra de navegacion */
+.nav-login {
+  background-color: #0056b3;
+  color: #ffffff !important;
+  padding: 6px 14px;
+  border-radius: 4px;
+}
+
+.nav-login:hover {
+  background-color: #003d80;
+  color: #ffffff !important;
+}
+
+/* Imagenes adaptadas dentro de las tarjetas del catalogo */
+.card-img {
+  width: 100%;
+  height: 160px;
+  object-fit: cover; /* Evita que la foto se deforme o se estire */
+  border-radius: 4px;
+  margin-bottom: 12px;
+}
+
+/* Descripcion del formulario de login */
+.login-desc {
+  text-align: center;
+  font-size: 0.9rem;
+  color: #666666;
+  margin-bottom: 15px;
+}
