@@ -18,47 +18,52 @@ function App() {
   const [nombre, setNombre] = useState('');
   const [correo, setCorreo] = useState('');
   const [password, setPassword] = useState('');
+  const [cargando, setCargando] = useState(false);
   const [errorForm, setErrorForm] = useState('');
   const [nivelRecomendado, setNivelRecomendado] = useState('Inicial');
   const [moduloActivo, setModuloActivo] = useState(null);
 
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+  // Apunta directamente a tu servidor en Render
+  const API_URL = import.meta.env.VITE_API_URL || 'https://pr-jc.onrender.com';
 
-  // Guarda el prospecto en contactos (envía correo) Y crea su cuenta de usuario en MongoDB
-const registrarCuentaYContacto = async () => {
+  // Guarda el prospecto en contactos Y crea su cuenta de usuario en MongoDB
+  const registrarCuentaYContacto = async () => {
+    setCargando(true);
     try {
-      // 1. Registrar contacto / enviar correo automático
-      const respContacto = await fetch(`${API_URL}/api/contactos`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          name: nombre, 
-          email: correo, 
-          mensaje: "Registro de estudiante desde AccounTalk" 
-        })
-      });
-      const dataContacto = await respContacto.json().catch(() => ({}));
-      if (!respContacto.ok) {
-        throw new Error(dataContacto.error || dataContacto.mensaje || `Error del servidor (${respContacto.status})`);
-      }
-
-      // 2. Crear credenciales de acceso en /api/auth/registrar
+      // 1. Crear credenciales de acceso en /api/auth/registrar
       const respAuth = await fetch(`${API_URL}/api/auth/registrar`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          email: correo, 
+          email: correo.trim().toLowerCase(), 
           password: password 
         })
       });
       const dataAuth = await respAuth.json().catch(() => ({}));
       if (!respAuth.ok) {
-        throw new Error(dataAuth.mensaje || 'No se pudo crear la cuenta (es posible que el correo ya exista)');
+        throw new Error(dataAuth.mensaje || 'No se pudo crear la cuenta (verifica si el correo ya está registrado)');
       }
 
+      // 2. Registrar contacto / enviar correo automático
+      const respContacto = await fetch(`${API_URL}/api/contactos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          name: nombre.trim(), 
+          email: correo.trim().toLowerCase(), 
+          mensaje: "Registro de estudiante desde AccounTalk" 
+        })
+      });
+      const dataContacto = await respContacto.json().catch(() => ({}));
+      if (!respContacto.ok) {
+        throw new Error(dataContacto.error || dataContacto.mensaje || `Error al guardar contacto (${respContacto.status})`);
+      }
+
+      setCargando(false);
       return true;
     } catch (error) {
-      setErrorForm(`⚠ ${error.message || 'No se pudo conectar con el servidor.'}`);
+      setCargando(false);
+      setErrorForm(`⚠ ${error.message || 'No se pudo conectar con el servidor. Espera 30 segundos e intenta de nuevo.'}`);
       return false;
     }
   };
@@ -68,9 +73,9 @@ const registrarCuentaYContacto = async () => {
       setErrorForm('⚠ Nombre, correo y contraseña son obligatorios para crear tu cuenta.');
       return;
     }
+    setErrorForm('');
     const registrado = await registrarCuentaYContacto();
     if (registrado) {
-      setErrorForm('');
       setVistaActual('prueba-activa');
     }
   };
@@ -80,9 +85,9 @@ const registrarCuentaYContacto = async () => {
       setErrorForm('⚠ Ingresa tu nombre, correo y contraseña para crear tu cuenta.');
       return;
     }
+    setErrorForm('');
     const registrado = await registrarCuentaYContacto();
     if (registrado) {
-      setErrorForm('');
       setNivelRecomendado('A elección del estudiante');
       setVistaActual('dashboard');
     }
@@ -98,14 +103,19 @@ const registrarCuentaYContacto = async () => {
       return;
     }
 
+    setCargando(true);
     try {
       const respuesta = await fetch(`${API_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: correo, password })
+        body: JSON.stringify({ 
+          email: correo.trim().toLowerCase(), 
+          password: password 
+        })
       });
 
-      const data = await respuesta.json();
+      const data = await respuesta.json().catch(() => ({}));
+      setCargando(false);
 
       if (!respuesta.ok) {
         setErrorForm(`⚠ ${data.mensaje || 'Credenciales inválidas'}`);
@@ -116,7 +126,8 @@ const registrarCuentaYContacto = async () => {
       if (!nombre) setNombre(correo.split('@')[0]);
       setVistaActual('dashboard');
     } catch (error) {
-      setErrorForm('⚠ No se pudo conectar con el servidor.');
+      setCargando(false);
+      setErrorForm('⚠ El servidor en Render está despertando. Espera 30 segundos y vuelve a presionar Enter Dashboard.');
     }
   };
 
@@ -292,11 +303,11 @@ const registrarCuentaYContacto = async () => {
                   <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Mínimo 6 caracteres" style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ccc', boxSizing: 'border-box', fontSize: '1rem' }} />
                 </div>
                 
-                <button onClick={iniciarPrueba} style={{ backgroundColor: '#0056b3', color: 'white', border: 'none', padding: '15px', borderRadius: '8px', fontWeight: 'bold', fontSize: '1.05rem', cursor: 'pointer', marginTop: '8px' }}>
-                  Crear cuenta y empezar Test
+                <button disabled={cargando} onClick={iniciarPrueba} style={{ backgroundColor: cargando ? '#6c757d' : '#0056b3', color: 'white', border: 'none', padding: '15px', borderRadius: '8px', fontWeight: 'bold', fontSize: '1.05rem', cursor: cargando ? 'wait' : 'pointer', marginTop: '8px' }}>
+                  {cargando ? 'Conectando con servidor...' : 'Crear cuenta y empezar Test'}
                 </button>
 
-                <button onClick={omitirPrueba} style={{ backgroundColor: 'transparent', color: '#0056b3', border: '1px solid #0056b3', padding: '12px', borderRadius: '8px', fontWeight: 'bold', fontSize: '0.95rem', cursor: 'pointer' }}>
+                <button disabled={cargando} onClick={omitirPrueba} style={{ backgroundColor: 'transparent', color: '#0056b3', border: '1px solid #0056b3', padding: '12px', borderRadius: '8px', fontWeight: 'bold', fontSize: '0.95rem', cursor: cargando ? 'wait' : 'pointer' }}>
                   Ya conozco mi nivel, elegir módulo
                 </button>
               </div>
@@ -376,8 +387,8 @@ const registrarCuentaYContacto = async () => {
                   <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '8px' }}>Password:</label>
                   <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ccc', boxSizing: 'border-box', fontSize: '1rem' }} />
                 </div>
-                <button type="submit" style={{ backgroundColor: '#0056b3', color: 'white', border: 'none', padding: '14px', borderRadius: '8px', fontWeight: 'bold', fontSize: '1.05rem', cursor: 'pointer', marginTop: '5px' }}>
-                  Enter Dashboard
+                <button disabled={cargando} type="submit" style={{ backgroundColor: cargando ? '#6c757d' : '#0056b3', color: 'white', border: 'none', padding: '14px', borderRadius: '8px', fontWeight: 'bold', fontSize: '1.05rem', cursor: cargando ? 'wait' : 'pointer', marginTop: '5px' }}>
+                  {cargando ? 'Verificando...' : 'Enter Dashboard'}
                 </button>
               </div>
             </form>
