@@ -25,7 +25,7 @@ function App() {
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
   // Guarda el prospecto en contactos (envía correo) Y crea su cuenta de usuario en MongoDB
-  const registrarCuentaYContacto = async () => {
+const registrarCuentaYContacto = async () => {
     try {
       // 1. Registrar contacto / enviar correo automático
       const respContacto = await fetch(`${API_URL}/api/contactos`, {
@@ -37,7 +37,10 @@ function App() {
           mensaje: "Registro de estudiante desde AccounTalk" 
         })
       });
-      if (!respContacto.ok) throw new Error('Error al registrar contacto');
+      const dataContacto = await respContacto.json().catch(() => ({}));
+      if (!respContacto.ok) {
+        throw new Error(dataContacto.error || dataContacto.mensaje || `Error del servidor (${respContacto.status})`);
+      }
 
       // 2. Crear credenciales de acceso en /api/auth/registrar
       const respAuth = await fetch(`${API_URL}/api/auth/registrar`, {
@@ -48,7 +51,10 @@ function App() {
           password: password 
         })
       });
-      if (!respAuth.ok) throw new Error('No se pudo crear la cuenta (es posible que el correo ya exista)');
+      const dataAuth = await respAuth.json().catch(() => ({}));
+      if (!respAuth.ok) {
+        throw new Error(dataAuth.mensaje || 'No se pudo crear la cuenta (es posible que el correo ya exista)');
+      }
 
       return true;
     } catch (error) {
