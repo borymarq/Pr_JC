@@ -19,13 +19,17 @@ function App() {
   const [nombre, setNombre] = useState('');
   const [correo, setCorreo] = useState('');
   const [password, setPassword] = useState('');
+  const [esRegistroAdmin, setEsRegistroAdmin] = useState(false);
   const [errorForm, setErrorForm] = useState('');
+  const [mensajeExito, setMensajeExito] = useState('');
   const [nivelRecomendado, setNivelRecomendado] = useState('Inicial');
   const [moduloActivo, setModuloActivo] = useState(null);
 
+  const API_URL = 'http://localhost:3000';
+
   const registrarEstudiante = async () => {
     try {
-      const respuesta = await fetch('http://localhost:3000/api/contactos', {
+      const respuesta = await fetch(`${API_URL}/api/contactos`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -67,15 +71,45 @@ function App() {
     }
   };
 
-  const manejarLogin = (e) => {
+  // CONEXIÓN REAL CON /api/auth/login y /api/auth/registrar
+  const manejarAuth = async (e) => {
     e.preventDefault();
+    setErrorForm('');
+    setMensajeExito('');
+
     if (!correo.trim() || !password.trim()) {
-      setErrorForm('⚠ Ingresa tu correo y contraseña para acceder.');
+      setErrorForm('⚠ Ingresa tu correo y contraseña.');
       return;
     }
-    setErrorForm('');
-    if (!nombre) setNombre(correo.split('@')[0]);
-    setVistaActual('dashboard');
+
+    const endpoint = esRegistroAdmin ? '/api/auth/registrar' : '/api/auth/login';
+
+    try {
+      const respuesta = await fetch(`${API_URL}${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: correo, password })
+      });
+
+      const data = await respuesta.json();
+
+      if (!respuesta.ok) {
+        setErrorForm(`⚠ ${data.mensaje || 'Error de autenticación'}`);
+        return;
+      }
+
+      if (esRegistroAdmin) {
+        setMensajeExito('✅ Usuario creado en MongoDB. Ahora puedes iniciar sesión.');
+        setEsRegistroAdmin(false);
+        setPassword('');
+      } else {
+        localStorage.setItem('tokenAccounTalk', data.token);
+        if (!nombre) setNombre(correo.split('@')[0]);
+        setVistaActual('dashboard');
+      }
+    } catch (error) {
+      setErrorForm('⚠ No se pudo conectar con el servidor backend.');
+    }
   };
 
   // ==========================================
@@ -133,10 +167,12 @@ function App() {
   };
 
   const reiniciarFlujo = () => {
+    localStorage.removeItem('tokenAccounTalk');
     setPreguntaActual(0);
     setPuntaje(0);
     setMostrarResultado(false);
     setErrorForm('');
+    setMensajeExito('');
     setModuloActivo(null);
     setVistaActual('inicio');
   };
@@ -163,7 +199,7 @@ function App() {
               Cerrar Sesión
             </button>
           ) : (
-            <button onClick={() => { setErrorForm(''); setVistaActual('login'); }} style={{ backgroundColor: '#0056b3', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '5px', fontWeight: 'bold', cursor: 'pointer' }}>
+            <button onClick={() => { setErrorForm(''); setMensajeExito(''); setVistaActual('login'); }} style={{ backgroundColor: '#0056b3', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '5px', fontWeight: 'bold', cursor: 'pointer' }}>
               Iniciar Sesión
             </button>
           )}
@@ -204,7 +240,6 @@ function App() {
               </div>
             </section>
 
-            {/* CATÁLOGO USANDO EL COMPONENTE REUTILIZABLE */}
             <section id="modulos" style={{ padding: '70px 20px', textAlign: 'center', backgroundColor: '#f8f9fa' }}>
               <h2 style={{ color: '#0056b3', marginBottom: '40px', fontSize: '2rem' }}>Catálogo de Módulos</h2>
               <div style={{ display: 'flex', justifyContent: 'center', gap: '30px', flexWrap: 'wrap' }}>
@@ -306,15 +341,23 @@ function App() {
           </div>
         )}
 
-        {/* PANTALLA 4: LOGIN */}
+        {/* PANTALLA 4: LOGIN / REGISTRO CONECTADO A MONGODB */}
         {vistaActual === 'login' && (
           <div style={{ display: 'flex', justifyContent: 'center', padding: '70px 20px' }}>
-            <form onSubmit={manejarLogin} style={{ backgroundColor: 'white', padding: '35px', borderRadius: '15px', boxShadow: '0 10px 40px rgba(0,0,0,0.1)', width: '100%', maxWidth: '400px', boxSizing: 'border-box' }}>
-              <h2 style={{ color: '#0056b3', marginBottom: '25px', textAlign: 'center', fontSize: '1.8rem' }}>Student Login</h2>
+            <form onSubmit={manejarAuth} style={{ backgroundColor: 'white', padding: '35px', borderRadius: '15px', boxShadow: '0 10px 40px rgba(0,0,0,0.1)', width: '100%', maxWidth: '400px', boxSizing: 'border-box' }}>
+              <h2 style={{ color: '#0056b3', marginBottom: '25px', textAlign: 'center', fontSize: '1.8rem' }}>
+                {esRegistroAdmin ? 'Registrar Credencial' : 'Student Login'}
+              </h2>
               
               {errorForm && (
                 <div style={{ backgroundColor: '#ffe5e5', color: '#d9534f', padding: '10px', borderRadius: '5px', marginBottom: '15px', fontSize: '0.9rem', fontWeight: 'bold', textAlign: 'center' }}>
                   {errorForm}
+                </div>
+              )}
+
+              {mensajeExito && (
+                <div style={{ backgroundColor: '#d4edda', color: '#155724', padding: '10px', borderRadius: '5px', marginBottom: '15px', fontSize: '0.9rem', fontWeight: 'bold', textAlign: 'center' }}>
+                  {mensajeExito}
                 </div>
               )}
 
@@ -328,8 +371,15 @@ function App() {
                   <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ccc', boxSizing: 'border-box', fontSize: '1rem' }} />
                 </div>
                 <button type="submit" style={{ backgroundColor: '#0056b3', color: 'white', border: 'none', padding: '14px', borderRadius: '8px', fontWeight: 'bold', fontSize: '1.05rem', cursor: 'pointer', marginTop: '5px' }}>
-                  Enter Dashboard
+                  {esRegistroAdmin ? 'Guardar en Base de Datos' : 'Enter Dashboard'}
                 </button>
+
+                <span 
+                  onClick={() => { setEsRegistroAdmin(!esRegistroAdmin); setErrorForm(''); setMensajeExito(''); }}
+                  style={{ textAlign: 'center', color: '#0056b3', fontSize: '0.9rem', cursor: 'pointer', textDecoration: 'underline', marginTop: '5px' }}
+                >
+                  {esRegistroAdmin ? 'Ya tengo cuenta, ir a Iniciar Sesión' : '¿Primera vez? Crear credencial de prueba'}
+                </span>
               </div>
             </form>
           </div>
