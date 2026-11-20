@@ -5,15 +5,21 @@ const jwt = require('jsonwebtoken');
 const registrar = async (req, res) => {
   try {
     const { email, password } = req.body;
+
+    const existe = await Usuario.findOne({ email });
+    if (existe) {
+      return res.status(400).json({ mensaje: 'Este correo ya está registrado' });
+    }
+
     const salt = await bcrypt.genSalt(10);
     const passwordEncriptada = await bcrypt.hash(password, salt);
 
     const nuevoUsuario = new Usuario({ email, password: passwordEncriptada });
     await nuevoUsuario.save();
 
-    res.status(201).json({ mensaje: 'Usuario administrador creado' });
+    res.status(201).json({ mensaje: 'Usuario registrado exitosamente' });
   } catch (error) {
-    res.status(500).json({ mensaje: 'Error al registrar' });
+    res.status(500).json({ mensaje: 'Error al registrar', error: error.message });
   }
 };
 

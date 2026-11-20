@@ -23,8 +23,8 @@ function App() {
   const [nivelRecomendado, setNivelRecomendado] = useState('Inicial');
   const [moduloActivo, setModuloActivo] = useState(null);
 
-  // Apunta directamente a tu servidor en Render
-  const API_URL = import.meta.env.VITE_API_URL || 'https://pr-jc.onrender.com';
+// Elimina cualquier barra "/" al final de VITE_API_URL para evitar rutas como //api/auth
+  const API_URL = (import.meta.env.VITE_API_URL || 'https://pr-jc.onrender.com').replace(/\/$/, '');
 
   // Guarda el prospecto en contactos Y crea su cuenta de usuario en MongoDB
   const registrarCuentaYContacto = async () => {
@@ -41,7 +41,7 @@ function App() {
       });
       const dataAuth = await respAuth.json().catch(() => ({}));
       if (!respAuth.ok) {
-        throw new Error(dataAuth.mensaje || 'No se pudo crear la cuenta (verifica si el correo ya está registrado)');
+        throw new Error(dataAuth.error || dataAuth.mensaje || `Error HTTP ${respAuth.status} en /api/auth/registrar`);
       }
 
       // 2. Registrar contacto / enviar correo automático
