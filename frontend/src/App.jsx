@@ -1,34 +1,81 @@
 import { useState } from 'react';
+import TarjetaModulo from './components/TarjetaModulo';
 
 function App() {
   const [isOpen, setIsOpen] = useState(false);
-  const [vistaActual, setVistaActual] = useState('inicio'); // 'inicio', 'login', 'registro-prueba', 'prueba-activa'
+  // Vistas: 'inicio', 'login', 'registro-prueba', 'prueba-activa', 'dashboard'
+  const [vistaActual, setVistaActual] = useState('inicio');
+
+  // Datos de los módulos (se pasan por props a TarjetaModulo)
+  const modulosData = [
+    { id: 1, title: "Módulo 1: Accounting Basics", level: "Inicial", desc: "Conceptos de Debit & Credit, estructura del Balance Sheet y terminología básica.", img: "/modulo1.jpg", temas: ["Assets, Liabilities & Equity", "The Accounting Equation", "Journal Entries in English"] },
+    { id: 2, title: "Módulo 2: Financial Statements", level: "Intermedio", desc: "Preparación e interpretación de Income Statement y Cash Flow Statement bajo IFRS.", img: "/modulo2.jpg", temas: ["IAS 1: Presentation of Financial Statements", "IAS 2: Inventories Valuation", "Cash Flow Operating Activities"] },
+    { id: 3, title: "Módulo 3: Audit & Reporting", level: "Avanzado", desc: "Vocabulario técnico para auditorías externas, papeles de trabajo y notas a los estados.", img: "/modulo3.jpg", temas: ["IFRS 16: Leases Recognition", "IFRS 9: Expected Credit Loss", "External Audit Working Papers"] }
+  ];
 
   // ==========================================
-  // ESTADOS DEL FORMULARIO Y VALIDACIÓN
+  // ESTADOS DE FORMULARIOS Y SESIÓN
   // ==========================================
   const [nombre, setNombre] = useState('');
   const [correo, setCorreo] = useState('');
+  const [password, setPassword] = useState('');
   const [errorForm, setErrorForm] = useState('');
+  const [nivelRecomendado, setNivelRecomendado] = useState('Inicial');
+  const [moduloActivo, setModuloActivo] = useState(null);
 
-  const iniciarPrueba = () => {
+  const registrarEstudiante = async () => {
+    try {
+      const respuesta = await fetch('http://localhost:3000/api/contactos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          name: nombre, 
+          email: correo, 
+          mensaje: "Registro de estudiante desde AccounTalk" 
+        })
+      });
+      if (!respuesta.ok) throw new Error('Error al guardar en base de datos');
+      return true;
+    } catch (error) {
+      setErrorForm('⚠ No se pudo conectar con el servidor. Verifica que tu backend esté encendido.');
+      return false;
+    }
+  };
+
+  const iniciarPrueba = async () => {
     if (!nombre.trim() || !correo.trim()) {
       setErrorForm('⚠ El nombre y el correo son obligatorios para continuar.');
       return;
     }
-    setErrorForm(''); // Limpiar errores
-    setVistaActual('prueba-activa');
+    const registrado = await registrarEstudiante();
+    if (registrado) {
+      setErrorForm('');
+      setVistaActual('prueba-activa');
+    }
   };
 
-  const omitirPrueba = () => {
+  const omitirPrueba = async () => {
     if (!nombre.trim() || !correo.trim()) {
       setErrorForm('⚠ Por favor, ingresa tus datos antes de ir al catálogo.');
       return;
     }
+    const registrado = await registrarEstudiante();
+    if (registrado) {
+      setErrorForm('');
+      setNivelRecomendado('A elección del estudiante');
+      setVistaActual('dashboard');
+    }
+  };
+
+  const manejarLogin = (e) => {
+    e.preventDefault();
+    if (!correo.trim() || !password.trim()) {
+      setErrorForm('⚠ Ingresa tu correo y contraseña para acceder.');
+      return;
+    }
     setErrorForm('');
-    // Aquí más adelante lo mandaremos a la base de datos y luego al dashboard
-    alert(`¡Perfecto ${nombre}! Te llevaremos directo a elegir tu módulo.`);
-    setVistaActual('inicio'); 
+    if (!nombre) setNombre(correo.split('@')[0]);
+    setVistaActual('dashboard');
   };
 
   // ==========================================
@@ -72,13 +119,15 @@ function App() {
   ];
 
   const manejarRespuesta = (indiceSeleccionado) => {
-    if (indiceSeleccionado === preguntasNIIF[preguntaActual].respuestaCorrecta) {
-      setPuntaje(puntaje + 1);
-    }
+    const nuevoPuntaje = indiceSeleccionado === preguntasNIIF[preguntaActual].respuestaCorrecta ? puntaje + 1 : puntaje;
+    setPuntaje(nuevoPuntaje);
+
     const siguientePregunta = preguntaActual + 1;
     if (siguientePregunta < preguntasNIIF.length) {
       setPreguntaActual(siguientePregunta);
     } else {
+      const nivel = nuevoPuntaje === 3 ? "Avanzado" : nuevoPuntaje === 2 ? "Intermedio" : "Inicial";
+      setNivelRecomendado(nivel);
       setMostrarResultado(true);
     }
   };
@@ -87,22 +136,21 @@ function App() {
     setPreguntaActual(0);
     setPuntaje(0);
     setMostrarResultado(false);
-    setNombre('');
-    setCorreo('');
     setErrorForm('');
+    setModuloActivo(null);
     setVistaActual('inicio');
   };
 
   return (
     <div style={{ fontFamily: 'Arial, sans-serif', color: '#333', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#f8f9fa' }}>
       
-      {/* 1. BARRA DE NAVEGACIÓN */}
-      <nav style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 50px', borderBottom: '2px solid #0056b3', backgroundColor: 'white', position: 'sticky', top: 0, zIndex: 1000, boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
+      {/* 1. BARRA DE NAVEGACIÓN RESPONSIVE */}
+      <nav style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px', padding: '15px 5%', borderBottom: '2px solid #0056b3', backgroundColor: 'white', position: 'sticky', top: 0, zIndex: 1000, boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
         <h2 onClick={reiniciarFlujo} style={{ color: '#0056b3', margin: 0, fontSize: '24px', cursor: 'pointer' }}>
           Accoun<span style={{color: '#ff9900'}}>Talk</span>
         </h2>
         
-        <div style={{ display: 'flex', gap: '25px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '20px', alignItems: 'center', flexWrap: 'wrap' }}>
           <span onClick={reiniciarFlujo} style={{ fontWeight: 'bold', cursor: 'pointer', color: '#555' }}>Inicio</span>
           {vistaActual === 'inicio' && (
             <>
@@ -110,141 +158,117 @@ function App() {
               <a href="#modulos" style={{ textDecoration: 'none', color: '#555', fontWeight: 'bold' }}>Módulos</a>
             </>
           )}
-          <button onClick={() => setVistaActual('login')} style={{ backgroundColor: '#0056b3', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '5px', fontWeight: 'bold', cursor: 'pointer', transition: '0.3s' }}>
-            Iniciar Sesión
-          </button>
+          {vistaActual === 'dashboard' ? (
+            <button onClick={reiniciarFlujo} style={{ backgroundColor: '#dc3545', color: 'white', border: 'none', padding: '10px 18px', borderRadius: '5px', fontWeight: 'bold', cursor: 'pointer' }}>
+              Cerrar Sesión
+            </button>
+          ) : (
+            <button onClick={() => { setErrorForm(''); setVistaActual('login'); }} style={{ backgroundColor: '#0056b3', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '5px', fontWeight: 'bold', cursor: 'pointer' }}>
+              Iniciar Sesión
+            </button>
+          )}
         </div>
       </nav>
 
       <main style={{ flex: 1 }}>
         
-        {/* ========================================== */}
-        {/* PANTALLA 1: INICIO Y LANDING PAGE          */}
-        {/* ========================================== */}
+        {/* PANTALLA 1: INICIO */}
         {vistaActual === 'inicio' && (
           <>
-            {/* HERO SECTION */}
-            <header style={{ textAlign: 'center', padding: '100px 20px', backgroundColor: '#eef2f5' }}>
-              <h1 style={{ color: '#0056b3', fontSize: '3rem', marginBottom: '20px', fontWeight: '900' }}>Aprende Contabilidad en Inglés Técnico</h1>
-              <p style={{ fontSize: '1.3rem', color: '#555', marginBottom: '40px', maxWidth: '700px', margin: '0 auto 40px' }}>Domina estados financieros bajo estándares IFRS/NIIF y destaca en entrevistas internacionales.</p>
-              <button onClick={() => setVistaActual('registro-prueba')} style={{ backgroundColor: '#ff9900', color: '#fff', border: 'none', padding: '15px 40px', borderRadius: '30px', fontSize: '1.2rem', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 15px rgba(255, 153, 0, 0.3)' }}>
+            <header style={{ textAlign: 'center', padding: '80px 20px', backgroundColor: '#eef2f5' }}>
+              <h1 style={{ color: '#0056b3', fontSize: 'clamp(2rem, 5vw, 3rem)', marginBottom: '20px', fontWeight: '900' }}>
+                Aprende Contabilidad en Inglés Técnico
+              </h1>
+              <p style={{ fontSize: '1.2rem', color: '#555', maxWidth: '700px', margin: '0 auto 40px' }}>
+                Domina estados financieros bajo estándares IFRS/NIIF y destaca en entrevistas internacionales.
+              </p>
+              <button onClick={() => setVistaActual('registro-prueba')} style={{ backgroundColor: '#ff9900', color: '#fff', border: 'none', padding: '15px 35px', borderRadius: '30px', fontSize: '1.1rem', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 15px rgba(255, 153, 0, 0.3)' }}>
                 Take the Placement Test
               </button>
             </header>
 
-            {/* SECCIÓN RESTAURADA Y MEJORADA: ¿POR QUÉ ESPECIALIZARSE? */}
-            <section id="proposito" style={{ padding: '80px 20px', textAlign: 'center', backgroundColor: 'white' }}>
-              <h2 style={{ color: '#333', marginBottom: '50px', fontSize: '2.2rem' }}>¿Por qué especializarse?</h2>
-              <div style={{ display: 'flex', justifyContent: 'center', gap: '40px', flexWrap: 'wrap' }}>
-                
-                <div style={{ backgroundColor: '#f4f8fb', borderRadius: '15px', padding: '40px 30px', width: '320px', borderTop: '5px solid #0056b3', boxShadow: '0 10px 30px rgba(0,0,0,0.05)', transition: 'transform 0.3s' }}>
+            <section id="proposito" style={{ padding: '70px 20px', textAlign: 'center', backgroundColor: 'white' }}>
+              <h2 style={{ color: '#333', marginBottom: '40px', fontSize: '2rem' }}>¿Por qué especializarse?</h2>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '30px', flexWrap: 'wrap' }}>
+                <div style={{ backgroundColor: '#f4f8fb', borderRadius: '15px', padding: '35px 25px', width: '100%', maxWidth: '320px', borderTop: '5px solid #0056b3', boxShadow: '0 10px 30px rgba(0,0,0,0.05)', boxSizing: 'border-box' }}>
                   <div style={{ fontSize: '3rem', marginBottom: '15px' }}>📊</div>
-                  <h3 style={{ color: '#0056b3', marginBottom: '15px', fontSize: '1.5rem' }}>IFRS & NIIF</h3>
-                  <p style={{ color: '#555', lineHeight: '1.6', fontSize: '1rem' }}>Manejo preciso de terminología técnica para la elaboración de estados financieros y reportes auditados internacionales.</p>
+                  <h3 style={{ color: '#0056b3', marginBottom: '15px', fontSize: '1.4rem' }}>IFRS & NIIF</h3>
+                  <p style={{ color: '#555', lineHeight: '1.6' }}>Manejo preciso de terminología técnica para la elaboración de estados financieros y reportes auditados internacionales.</p>
                 </div>
 
-                <div style={{ backgroundColor: '#f4f8fb', borderRadius: '15px', padding: '40px 30px', width: '320px', borderTop: '5px solid #ff9900', boxShadow: '0 10px 30px rgba(0,0,0,0.05)', transition: 'transform 0.3s' }}>
+                <div style={{ backgroundColor: '#f4f8fb', borderRadius: '15px', padding: '35px 25px', width: '100%', maxWidth: '320px', borderTop: '5px solid #ff9900', boxShadow: '0 10px 30px rgba(0,0,0,0.05)', boxSizing: 'border-box' }}>
                   <div style={{ fontSize: '3rem', marginBottom: '15px' }}>💬</div>
-                  <h3 style={{ color: '#0056b3', marginBottom: '15px', fontSize: '1.5rem' }}>Comunicación Corporativa</h3>
-                  <p style={{ color: '#555', lineHeight: '1.6', fontSize: '1rem' }}>Preparación estructurada para reuniones ejecutivas, defensa de auditorías y redacción de correos en inglés de negocios.</p>
+                  <h3 style={{ color: '#0056b3', marginBottom: '15px', fontSize: '1.4rem' }}>Comunicación Corporativa</h3>
+                  <p style={{ color: '#555', lineHeight: '1.6' }}>Preparación estructurada para reuniones ejecutivas, defensa de auditorías y redacción de correos en inglés de negocios.</p>
                 </div>
-
               </div>
             </section>
 
-            {/* CATÁLOGO DE MÓDULOS CON TEXTOS EXPLICATIVOS RESTAURADOS */}
-            <section id="modulos" style={{ padding: '80px 20px', textAlign: 'center', backgroundColor: '#f8f9fa' }}>
-              <h2 style={{ color: '#0056b3', marginBottom: '50px', fontSize: '2.2rem' }}>Catálogo de Módulos</h2>
+            {/* CATÁLOGO USANDO EL COMPONENTE REUTILIZABLE */}
+            <section id="modulos" style={{ padding: '70px 20px', textAlign: 'center', backgroundColor: '#f8f9fa' }}>
+              <h2 style={{ color: '#0056b3', marginBottom: '40px', fontSize: '2rem' }}>Catálogo de Módulos</h2>
               <div style={{ display: 'flex', justifyContent: 'center', gap: '30px', flexWrap: 'wrap' }}>
-                {[
-                  { title: "Módulo 1: Accounting Basics", level: "Inicial", desc: "Conceptos de Debit & Credit, estructura del Balance Sheet y terminología básica.", img: "/modulo1.jpg" },
-                  { title: "Módulo 2: Financial Statements", level: "Intermedio", desc: "Preparación e interpretación de Income Statement y Cash Flow Statement bajo IFRS.", img: "/modulo2.jpg" },
-                  { title: "Módulo 3: Audit & Reporting", level: "Avanzado", desc: "Vocabulario técnico para auditorías externas, papeles de trabajo y notas a los estados.", img: "/modulo3.jpg" }
-                ].map((mod, i) => (
-                  <div key={i} style={{ backgroundColor: 'white', borderRadius: '12px', width: '320px', padding: '25px', boxShadow: '0 5px 20px rgba(0,0,0,0.05)', textAlign: 'left' }}>
-                    <div style={{ height: '160px', backgroundColor: '#e9ecef', borderRadius: '8px', marginBottom: '20px', overflow: 'hidden' }}>
-                      <img src={mod.img} alt={mod.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => e.target.style.display = 'none'} />
-                    </div>
-                    <h3 style={{ color: '#0056b3', fontSize: '1.3rem', marginBottom: '10px' }}>{mod.title}</h3>
-                    <span style={{ display: 'inline-block', backgroundColor: '#eef2f5', padding: '5px 12px', borderRadius: '20px', fontSize: '0.85rem', fontWeight: 'bold', color: '#333', marginBottom: '15px' }}>
-                      Nivel: {mod.level}
-                    </span>
-                    <p style={{ color: '#666', fontSize: '0.95rem', lineHeight: '1.5' }}>{mod.desc}</p>
-                  </div>
+                {modulosData.map((mod) => (
+                  <TarjetaModulo 
+                    key={mod.id}
+                    title={mod.title}
+                    level={mod.level}
+                    desc={mod.desc}
+                    img={mod.img}
+                  />
                 ))}
               </div>
             </section>
           </>
         )}
 
-        {/* ========================================== */}
-        {/* PANTALLA 2: FORMULARIO PRE-PRUEBA (OBLIGATORIO) */}
-        {/* ========================================== */}
+        {/* PANTALLA 2: FORMULARIO PRE-PRUEBA */}
         {vistaActual === 'registro-prueba' && (
-          <div style={{ display: 'flex', justifyContent: 'center', padding: '80px 20px' }}>
-            <div style={{ backgroundColor: 'white', padding: '50px', borderRadius: '15px', boxShadow: '0 10px 40px rgba(0,0,0,0.1)', width: '500px' }}>
-              <h2 style={{ color: '#0056b3', marginBottom: '10px', textAlign: 'center', fontSize: '2rem' }}>IFRS Placement Test</h2>
-              <p style={{ textAlign: 'center', color: '#666', marginBottom: '30px', fontSize: '1.1rem' }}>Ingresa tus datos para comenzar la evaluación técnica en inglés.</p>
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '60px 20px' }}>
+            <div style={{ backgroundColor: 'white', padding: '35px', borderRadius: '15px', boxShadow: '0 10px 40px rgba(0,0,0,0.1)', width: '100%', maxWidth: '480px', boxSizing: 'border-box' }}>
+              <h2 style={{ color: '#0056b3', marginBottom: '10px', textAlign: 'center', fontSize: '1.8rem' }}>IFRS Placement Test</h2>
+              <p style={{ textAlign: 'center', color: '#666', marginBottom: '25px' }}>Ingresa tus datos para comenzar la evaluación técnica en inglés.</p>
               
-              {/* Alerta de Error (Solo aparece si dejan los campos vacíos) */}
               {errorForm && (
                 <div style={{ backgroundColor: '#ffe5e5', color: '#d9534f', padding: '12px', borderRadius: '5px', marginBottom: '20px', fontSize: '0.9rem', fontWeight: 'bold', textAlign: 'center' }}>
                   {errorForm}
                 </div>
               )}
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
                 <div>
-                  <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '8px', color: '#333' }}>Nombre completo *</label>
-                  <input 
-                    type="text" 
-                    value={nombre}
-                    onChange={(e) => setNombre(e.target.value)}
-                    placeholder="Ej. Juan Pérez" 
-                    style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ccc', boxSizing: 'border-box', fontSize: '1rem' }} 
-                  />
+                  <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '8px' }}>Nombre completo *</label>
+                  <input type="text" value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Ej. Juan Pérez" style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ccc', boxSizing: 'border-box', fontSize: '1rem' }} />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '8px', color: '#333' }}>Correo universitario / personal *</label>
-                  <input 
-                    type="email" 
-                    value={correo}
-                    onChange={(e) => setCorreo(e.target.value)}
-                    placeholder="correo@ejemplo.com" 
-                    style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ccc', boxSizing: 'border-box', fontSize: '1rem' }} 
-                  />
+                  <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '8px' }}>Correo universitario / personal *</label>
+                  <input type="email" value={correo} onChange={(e) => setCorreo(e.target.value)} placeholder="correo@ejemplo.com" style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ccc', boxSizing: 'border-box', fontSize: '1rem' }} />
                 </div>
                 
-                {/* Botón principal para dar la prueba */}
-                <button onClick={iniciarPrueba} style={{ backgroundColor: '#0056b3', color: 'white', border: 'none', padding: '15px', borderRadius: '8px', fontWeight: 'bold', fontSize: '1.1rem', cursor: 'pointer', marginTop: '10px', transition: '0.2s' }}>
+                <button onClick={iniciarPrueba} style={{ backgroundColor: '#0056b3', color: 'white', border: 'none', padding: '15px', borderRadius: '8px', fontWeight: 'bold', fontSize: '1.05rem', cursor: 'pointer', marginTop: '5px' }}>
                   Start Assessment
                 </button>
 
-                {/* Opción secundaria para los que ya saben su nivel */}
-                <button onClick={omitirPrueba} style={{ backgroundColor: 'transparent', color: '#0056b3', border: '1px solid #0056b3', padding: '12px', borderRadius: '8px', fontWeight: 'bold', fontSize: '1rem', cursor: 'pointer', transition: '0.2s' }}>
+                <button onClick={omitirPrueba} style={{ backgroundColor: 'transparent', color: '#0056b3', border: '1px solid #0056b3', padding: '12px', borderRadius: '8px', fontWeight: 'bold', fontSize: '0.95rem', cursor: 'pointer' }}>
                   Ya conozco mi nivel, elegir módulo
                 </button>
-
               </div>
             </div>
           </div>
         )}
 
-        {/* ========================================== */}
-        {/* PANTALLA 3: LA PRUEBA TÉCNICA              */}
-        {/* ========================================== */}
+        {/* PANTALLA 3: LA PRUEBA TÉCNICA */}
         {vistaActual === 'prueba-activa' && (
-          <div style={{ display: 'flex', justifyContent: 'center', padding: '60px 20px' }}>
-            <div style={{ backgroundColor: 'white', padding: '50px', borderRadius: '15px', boxShadow: '0 10px 40px rgba(0,0,0,0.1)', width: '700px' }}>
-              
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '50px 20px' }}>
+            <div style={{ backgroundColor: 'white', padding: '35px', borderRadius: '15px', boxShadow: '0 10px 40px rgba(0,0,0,0.1)', width: '100%', maxWidth: '680px', boxSizing: 'border-box' }}>
               {!mostrarResultado ? (
                 <>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '30px', color: '#888', fontWeight: 'bold' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '25px', color: '#888', fontWeight: 'bold', fontSize: '0.9rem' }}>
                     <span>Technical Assessment</span>
                     <span>Question {preguntaActual + 1} of {preguntasNIIF.length}</span>
                   </div>
                   
-                  <h3 style={{ color: '#333', fontSize: '1.5rem', marginBottom: '30px', lineHeight: '1.4' }}>
+                  <h3 style={{ color: '#333', fontSize: '1.35rem', marginBottom: '25px', lineHeight: '1.4' }}>
                     {preguntasNIIF[preguntaActual].pregunta}
                   </h3>
                   
@@ -253,9 +277,7 @@ function App() {
                       <button 
                         key={index}
                         onClick={() => manejarRespuesta(index)}
-                        style={{ textAlign: 'left', padding: '18px', backgroundColor: '#f8f9fa', border: '2px solid #e9ecef', borderRadius: '10px', cursor: 'pointer', fontSize: '1.1rem', color: '#444', transition: '0.2s', fontWeight: '500' }}
-                        onMouseOver={(e) => { e.target.style.borderColor = '#0056b3'; e.target.style.backgroundColor = '#f4f8fb'; }}
-                        onMouseOut={(e) => { e.target.style.borderColor = '#e9ecef'; e.target.style.backgroundColor = '#f8f9fa'; }}
+                        style={{ textAlign: 'left', padding: '16px', backgroundColor: '#f8f9fa', border: '2px solid #e9ecef', borderRadius: '10px', cursor: 'pointer', fontSize: '1rem', color: '#444', fontWeight: '500' }}
                       >
                         {opcion}
                       </button>
@@ -264,48 +286,93 @@ function App() {
                 </>
               ) : (
                 <div style={{ textAlign: 'center' }}>
-                  <h2 style={{ color: '#0056b3', marginBottom: '20px', fontSize: '2.5rem' }}>Assessment Completed!</h2>
-                  <p style={{ fontSize: '1.3rem', marginBottom: '15px', color: '#555' }}>Excellent work, <strong>{nombre}</strong>.</p>
-                  <p style={{ fontSize: '1.2rem', marginBottom: '30px' }}>Your Score: <strong style={{ fontSize: '1.5rem', color: '#ff9900' }}>{puntaje} / {preguntasNIIF.length}</strong></p>
+                  <h2 style={{ color: '#0056b3', marginBottom: '15px', fontSize: '2rem' }}>Assessment Completed!</h2>
+                  <p style={{ fontSize: '1.2rem', marginBottom: '10px', color: '#555' }}>Excellent work, <strong>{nombre}</strong>.</p>
+                  <p style={{ fontSize: '1.1rem', marginBottom: '25px' }}>Your Score: <strong style={{ fontSize: '1.4rem', color: '#ff9900' }}>{puntaje} / {preguntasNIIF.length}</strong></p>
                   
-                  <div style={{ padding: '30px', backgroundColor: '#f4f8fb', borderRadius: '15px', marginBottom: '40px', border: '1px solid #cce5ff' }}>
-                    <p style={{ color: '#555', marginBottom: '10px', fontWeight: 'bold' }}>Nivel de Módulo Recomendado:</p>
-                    <h3 style={{ margin: 0, color: '#0056b3', fontSize: '1.8rem' }}>
-                      {puntaje === 3 ? "Avanzado (Audit & Reporting)" : puntaje === 2 ? "Intermedio (Financial Statements)" : "Inicial (Accounting Basics)"}
+                  <div style={{ padding: '25px', backgroundColor: '#f4f8fb', borderRadius: '15px', marginBottom: '30px', border: '1px solid #cce5ff' }}>
+                    <p style={{ color: '#555', marginBottom: '8px', fontWeight: 'bold' }}>Nivel de Módulo Recomendado:</p>
+                    <h3 style={{ margin: 0, color: '#0056b3', fontSize: '1.5rem' }}>
+                      {nivelRecomendado}
                     </h3>
                   </div>
                   
-                  <button onClick={reiniciarFlujo} style={{ backgroundColor: '#0056b3', color: 'white', border: 'none', padding: '15px 35px', borderRadius: '8px', fontWeight: 'bold', fontSize: '1.1rem', cursor: 'pointer' }}>
+                  <button onClick={() => setVistaActual('dashboard')} style={{ backgroundColor: '#0056b3', color: 'white', border: 'none', padding: '15px 30px', borderRadius: '8px', fontWeight: 'bold', fontSize: '1.05rem', cursor: 'pointer' }}>
                     Continuar al Dashboard
                   </button>
                 </div>
               )}
-
             </div>
           </div>
         )}
 
-        {/* ========================================== */}
-        {/* PANTALLA 4: LOGIN                          */}
-        {/* ========================================== */}
+        {/* PANTALLA 4: LOGIN */}
         {vistaActual === 'login' && (
-          <div style={{ display: 'flex', justifyContent: 'center', padding: '100px 20px' }}>
-            <div style={{ backgroundColor: 'white', padding: '40px', borderRadius: '15px', boxShadow: '0 10px 40px rgba(0,0,0,0.1)', width: '400px' }}>
-              <h2 style={{ color: '#0056b3', marginBottom: '30px', textAlign: 'center', fontSize: '2rem' }}>Student Login</h2>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '70px 20px' }}>
+            <form onSubmit={manejarLogin} style={{ backgroundColor: 'white', padding: '35px', borderRadius: '15px', boxShadow: '0 10px 40px rgba(0,0,0,0.1)', width: '100%', maxWidth: '400px', boxSizing: 'border-box' }}>
+              <h2 style={{ color: '#0056b3', marginBottom: '25px', textAlign: 'center', fontSize: '1.8rem' }}>Student Login</h2>
+              
+              {errorForm && (
+                <div style={{ backgroundColor: '#ffe5e5', color: '#d9534f', padding: '10px', borderRadius: '5px', marginBottom: '15px', fontSize: '0.9rem', fontWeight: 'bold', textAlign: 'center' }}>
+                  {errorForm}
+                </div>
+              )}
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
                 <div>
-                  <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '8px', color: '#333' }}>Email Address:</label>
-                  <input type="email" style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ccc', boxSizing: 'border-box', fontSize: '1rem' }} />
+                  <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '8px' }}>Email Address:</label>
+                  <input type="email" value={correo} onChange={(e) => setCorreo(e.target.value)} placeholder="estudiante@espol.edu.ec" style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ccc', boxSizing: 'border-box', fontSize: '1rem' }} />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '8px', color: '#333' }}>Password:</label>
-                  <input type="password" style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ccc', boxSizing: 'border-box', fontSize: '1rem' }} />
+                  <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '8px' }}>Password:</label>
+                  <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ccc', boxSizing: 'border-box', fontSize: '1rem' }} />
                 </div>
-                <button style={{ backgroundColor: '#0056b3', color: 'white', border: 'none', padding: '15px', borderRadius: '8px', fontWeight: 'bold', fontSize: '1.1rem', cursor: 'pointer', marginTop: '10px' }}>
+                <button type="submit" style={{ backgroundColor: '#0056b3', color: 'white', border: 'none', padding: '14px', borderRadius: '8px', fontWeight: 'bold', fontSize: '1.05rem', cursor: 'pointer', marginTop: '5px' }}>
                   Enter Dashboard
                 </button>
               </div>
+            </form>
+          </div>
+        )}
+
+        {/* PANTALLA 5: DASHBOARD DEL ESTUDIANTE */}
+        {vistaActual === 'dashboard' && (
+          <div style={{ padding: '40px 5%', maxWidth: '1100px', margin: '0 auto' }}>
+            <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '15px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', marginBottom: '30px', borderLeft: '6px solid #0056b3' }}>
+              <h2 style={{ color: '#0056b3', margin: '0 0 10px 0' }}>Bienvenido a tu Aula Virtual, {nombre || 'Estudiante'} 👋</h2>
+              <p style={{ margin: 0, color: '#555' }}>
+                Nivel asignado: <strong>{nivelRecomendado}</strong> | Usa el botón azul de la esquina inferior derecha para practicar términos NIIF con el <strong>Tutor IA</strong>.
+              </p>
             </div>
+
+            {moduloActivo ? (
+              <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '15px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)' }}>
+                <button onClick={() => setModuloActivo(null)} style={{ backgroundColor: '#eef2f5', border: 'none', padding: '8px 15px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', marginBottom: '20px' }}>
+                  ← Volver a mis módulos
+                </button>
+                <h2 style={{ color: '#0056b3' }}>{moduloActivo.title}</h2>
+                <p style={{ color: '#666', marginBottom: '20px' }}>{moduloActivo.desc}</p>
+                <h4 style={{ color: '#333' }}>Temario técnico del módulo:</h4>
+                <ul style={{ lineHeight: '2', color: '#444' }}>
+                  {moduloActivo.temas.map((tema, idx) => (
+                    <li key={idx}>📘 {tema}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '30px', flexWrap: 'wrap' }}>
+                {modulosData.map((mod) => (
+                  <TarjetaModulo 
+                    key={mod.id}
+                    title={mod.title}
+                    level={mod.level}
+                    desc={mod.desc}
+                    img={mod.img}
+                    onSeleccionar={() => setModuloActivo(mod)}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -320,13 +387,13 @@ function App() {
       {isOpen && (
         <iframe 
           src="https://cdn.botpress.cloud/webchat/v3.7/shareable.html?configUrl=https://files.bpcontent.cloud/2026/11/01/03/20261101035119-085XUJWP.json"
-          style={{ position: "fixed", bottom: "90px", right: "20px", width: "380px", height: "550px", border: "none", borderRadius: "15px", boxShadow: "0 8px 24px rgba(0,0,0,0.2)", zIndex: 9999 }}
+          style={{ position: "fixed", bottom: "90px", right: "20px", width: "calc(100vw - 40px)", maxWidth: "380px", height: "520px", border: "none", borderRadius: "15px", boxShadow: "0 8px 24px rgba(0,0,0,0.2)", zIndex: 9999 }}
           title="Tutor NIIF"
         />
       )}
       <button 
         onClick={() => setIsOpen(!isOpen)}
-        style={{ position: "fixed", bottom: "20px", right: "20px", width: "65px", height: "65px", borderRadius: "50%", backgroundColor: "#2563EB", color: "white", border: "none", fontSize: "28px", cursor: "pointer", boxShadow: "0 4px 15px rgba(0,0,0,0.3)", zIndex: 10000, display: "flex", justifyContent: "center", alignItems: "center", transition: '0.2s' }}
+        style={{ position: "fixed", bottom: "20px", right: "20px", width: "60px", height: "60px", borderRadius: "50%", backgroundColor: "#2563EB", color: "white", border: "none", fontSize: "26px", cursor: "pointer", boxShadow: "0 4px 15px rgba(0,0,0,0.3)", zIndex: 10000, display: "flex", justifyContent: "center", alignItems: "center" }}
       >
         {isOpen ? "✕" : "💬"} 
       </button>
