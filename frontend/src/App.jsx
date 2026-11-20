@@ -6,7 +6,6 @@ function App() {
   // Vistas: 'inicio', 'login', 'registro-prueba', 'prueba-activa', 'dashboard'
   const [vistaActual, setVistaActual] = useState('inicio');
 
-  // Datos de los módulos (se pasan por props a TarjetaModulo)
   const modulosData = [
     { id: 1, title: "Módulo 1: Accounting Basics", level: "Inicial", desc: "Conceptos de Debit & Credit, estructura del Balance Sheet y terminología básica.", img: "/modulo1.jpg", temas: ["Assets, Liabilities & Equity", "The Accounting Equation", "Journal Entries in English"] },
     { id: 2, title: "Módulo 2: Financial Statements", level: "Intermedio", desc: "Preparación e interpretación de Income Statement y Cash Flow Statement bajo IFRS.", img: "/modulo2.jpg", temas: ["IAS 1: Presentation of Financial Statements", "IAS 2: Inventories Valuation", "Cash Flow Operating Activities"] },
@@ -19,17 +18,17 @@ function App() {
   const [nombre, setNombre] = useState('');
   const [correo, setCorreo] = useState('');
   const [password, setPassword] = useState('');
-  const [esRegistroAdmin, setEsRegistroAdmin] = useState(false);
   const [errorForm, setErrorForm] = useState('');
-  const [mensajeExito, setMensajeExito] = useState('');
   const [nivelRecomendado, setNivelRecomendado] = useState('Inicial');
   const [moduloActivo, setModuloActivo] = useState(null);
 
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
-  const registrarEstudiante = async () => {
+  // Guarda el prospecto en contactos (envía correo) Y crea su cuenta de usuario en MongoDB
+  const registrarCuentaYContacto = async () => {
     try {
-      const respuesta = await fetch(`${API_URL}/api/contactos`, {
+      // 1. Registrar contacto / enviar correo automático
+      const respContacto = await fetch(`${API_URL}/api/contactos`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -38,20 +37,32 @@ function App() {
           mensaje: "Registro de estudiante desde AccounTalk" 
         })
       });
-      if (!respuesta.ok) throw new Error('Error al guardar en base de datos');
+      if (!respContacto.ok) throw new Error('Error al registrar contacto');
+
+      // 2. Crear credenciales de acceso en /api/auth/registrar
+      const respAuth = await fetch(`${API_URL}/api/auth/registrar`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          email: correo, 
+          password: password 
+        })
+      });
+      if (!respAuth.ok) throw new Error('No se pudo crear la cuenta (es posible que el correo ya exista)');
+
       return true;
     } catch (error) {
-      setErrorForm('⚠ No se pudo conectar con el servidor. Verifica que tu backend esté encendido.');
+      setErrorForm(`⚠ ${error.message || 'No se pudo conectar con el servidor.'}`);
       return false;
     }
   };
 
   const iniciarPrueba = async () => {
-    if (!nombre.trim() || !correo.trim()) {
-      setErrorForm('⚠ El nombre y el correo son obligatorios para continuar.');
+    if (!nombre.trim() || !correo.trim() || !password.trim()) {
+      setErrorForm('⚠ Nombre, correo y contraseña son obligatorios para crear tu cuenta.');
       return;
     }
-    const registrado = await registrarEstudiante();
+    const registrado = await registrarCuentaYContacto();
     if (registrado) {
       setErrorForm('');
       setVistaActual('prueba-activa');
@@ -59,11 +70,11 @@ function App() {
   };
 
   const omitirPrueba = async () => {
-    if (!nombre.trim() || !correo.trim()) {
-      setErrorForm('⚠ Por favor, ingresa tus datos antes de ir al catálogo.');
+    if (!nombre.trim() || !correo.trim() || !password.trim()) {
+      setErrorForm('⚠ Ingresa tu nombre, correo y contraseña para crear tu cuenta.');
       return;
     }
-    const registrado = await registrarEstudiante();
+    const registrado = await registrarCuentaYContacto();
     if (registrado) {
       setErrorForm('');
       setNivelRecomendado('A elección del estudiante');
@@ -71,21 +82,18 @@ function App() {
     }
   };
 
-  // CONEXIÓN REAL CON /api/auth/login y /api/auth/registrar
-  const manejarAuth = async (e) => {
+  // CONEXIÓN EXCLUSIVA DE LOGIN CON /api/auth/login
+  const manejarLogin = async (e) => {
     e.preventDefault();
     setErrorForm('');
-    setMensajeExito('');
 
     if (!correo.trim() || !password.trim()) {
       setErrorForm('⚠ Ingresa tu correo y contraseña.');
       return;
     }
 
-    const endpoint = esRegistroAdmin ? '/api/auth/registrar' : '/api/auth/login';
-
     try {
-      const respuesta = await fetch(`${API_URL}${endpoint}`, {
+      const respuesta = await fetch(`${API_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: correo, password })
@@ -94,21 +102,15 @@ function App() {
       const data = await respuesta.json();
 
       if (!respuesta.ok) {
-        setErrorForm(`⚠ ${data.mensaje || 'Error de autenticación'}`);
+        setErrorForm(`⚠ ${data.mensaje || 'Credenciales inválidas'}`);
         return;
       }
 
-      if (esRegistroAdmin) {
-        setMensajeExito('✅ Usuario creado en MongoDB. Ahora puedes iniciar sesión.');
-        setEsRegistroAdmin(false);
-        setPassword('');
-      } else {
-        localStorage.setItem('tokenAccounTalk', data.token);
-        if (!nombre) setNombre(correo.split('@')[0]);
-        setVistaActual('dashboard');
-      }
+      localStorage.setItem('tokenAccounTalk', data.token);
+      if (!nombre) setNombre(correo.split('@')[0]);
+      setVistaActual('dashboard');
     } catch (error) {
-      setErrorForm('⚠ No se pudo conectar con el servidor backend.');
+      setErrorForm('⚠ No se pudo conectar con el servidor.');
     }
   };
 
@@ -172,7 +174,7 @@ function App() {
     setPuntaje(0);
     setMostrarResultado(false);
     setErrorForm('');
-    setMensajeExito('');
+    setPassword('');
     setModuloActivo(null);
     setVistaActual('inicio');
   };
@@ -199,7 +201,7 @@ function App() {
               Cerrar Sesión
             </button>
           ) : (
-            <button onClick={() => { setErrorForm(''); setMensajeExito(''); setVistaActual('login'); }} style={{ backgroundColor: '#0056b3', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '5px', fontWeight: 'bold', cursor: 'pointer' }}>
+            <button onClick={() => { setErrorForm(''); setPassword(''); setVistaActual('login'); }} style={{ backgroundColor: '#0056b3', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '5px', fontWeight: 'bold', cursor: 'pointer' }}>
               Iniciar Sesión
             </button>
           )}
@@ -218,7 +220,7 @@ function App() {
               <p style={{ fontSize: '1.2rem', color: '#555', maxWidth: '700px', margin: '0 auto 40px' }}>
                 Domina estados financieros bajo estándares IFRS/NIIF y destaca en entrevistas internacionales.
               </p>
-              <button onClick={() => setVistaActual('registro-prueba')} style={{ backgroundColor: '#ff9900', color: '#fff', border: 'none', padding: '15px 35px', borderRadius: '30px', fontSize: '1.1rem', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 15px rgba(255, 153, 0, 0.3)' }}>
+              <button onClick={() => { setErrorForm(''); setPassword(''); setVistaActual('registro-prueba'); }} style={{ backgroundColor: '#ff9900', color: '#fff', border: 'none', padding: '15px 35px', borderRadius: '30px', fontSize: '1.1rem', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 15px rgba(255, 153, 0, 0.3)' }}>
                 Take the Placement Test
               </button>
             </header>
@@ -257,12 +259,12 @@ function App() {
           </>
         )}
 
-        {/* PANTALLA 2: FORMULARIO PRE-PRUEBA */}
+        {/* PANTALLA 2: CREACIÓN DE CUENTA + ACCESO AL TEST */}
         {vistaActual === 'registro-prueba' && (
           <div style={{ display: 'flex', justifyContent: 'center', padding: '60px 20px' }}>
             <div style={{ backgroundColor: 'white', padding: '35px', borderRadius: '15px', boxShadow: '0 10px 40px rgba(0,0,0,0.1)', width: '100%', maxWidth: '480px', boxSizing: 'border-box' }}>
-              <h2 style={{ color: '#0056b3', marginBottom: '10px', textAlign: 'center', fontSize: '1.8rem' }}>IFRS Placement Test</h2>
-              <p style={{ textAlign: 'center', color: '#666', marginBottom: '25px' }}>Ingresa tus datos para comenzar la evaluación técnica en inglés.</p>
+              <h2 style={{ color: '#0056b3', marginBottom: '10px', textAlign: 'center', fontSize: '1.8rem' }}>Crea tu Cuenta AccounTalk</h2>
+              <p style={{ textAlign: 'center', color: '#666', marginBottom: '25px' }}>Registra tus datos para habilitar tu acceso y comenzar tu evaluación NIIF.</p>
               
               {errorForm && (
                 <div style={{ backgroundColor: '#ffe5e5', color: '#d9534f', padding: '12px', borderRadius: '5px', marginBottom: '20px', fontSize: '0.9rem', fontWeight: 'bold', textAlign: 'center' }}>
@@ -270,18 +272,22 @@ function App() {
                 </div>
               )}
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <div>
-                  <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '8px' }}>Nombre completo *</label>
-                  <input type="text" value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Ej. Juan Pérez" style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ccc', boxSizing: 'border-box', fontSize: '1rem' }} />
+                  <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px' }}>Nombre completo *</label>
+                  <input type="text" value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Ej. Borys Marquez" style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ccc', boxSizing: 'border-box', fontSize: '1rem' }} />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '8px' }}>Correo universitario / personal *</label>
+                  <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px' }}>Correo electrónico *</label>
                   <input type="email" value={correo} onChange={(e) => setCorreo(e.target.value)} placeholder="correo@ejemplo.com" style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ccc', boxSizing: 'border-box', fontSize: '1rem' }} />
                 </div>
+                <div>
+                  <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px' }}>Crea una contraseña *</label>
+                  <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Mínimo 6 caracteres" style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ccc', boxSizing: 'border-box', fontSize: '1rem' }} />
+                </div>
                 
-                <button onClick={iniciarPrueba} style={{ backgroundColor: '#0056b3', color: 'white', border: 'none', padding: '15px', borderRadius: '8px', fontWeight: 'bold', fontSize: '1.05rem', cursor: 'pointer', marginTop: '5px' }}>
-                  Start Assessment
+                <button onClick={iniciarPrueba} style={{ backgroundColor: '#0056b3', color: 'white', border: 'none', padding: '15px', borderRadius: '8px', fontWeight: 'bold', fontSize: '1.05rem', cursor: 'pointer', marginTop: '8px' }}>
+                  Crear cuenta y empezar Test
                 </button>
 
                 <button onClick={omitirPrueba} style={{ backgroundColor: 'transparent', color: '#0056b3', border: '1px solid #0056b3', padding: '12px', borderRadius: '8px', fontWeight: 'bold', fontSize: '0.95rem', cursor: 'pointer' }}>
@@ -341,23 +347,17 @@ function App() {
           </div>
         )}
 
-        {/* PANTALLA 4: LOGIN / REGISTRO CONECTADO A MONGODB */}
+        {/* PANTALLA 4: LOGIN EXCLUSIVO */}
         {vistaActual === 'login' && (
           <div style={{ display: 'flex', justifyContent: 'center', padding: '70px 20px' }}>
-            <form onSubmit={manejarAuth} style={{ backgroundColor: 'white', padding: '35px', borderRadius: '15px', boxShadow: '0 10px 40px rgba(0,0,0,0.1)', width: '100%', maxWidth: '400px', boxSizing: 'border-box' }}>
+            <form onSubmit={manejarLogin} style={{ backgroundColor: 'white', padding: '35px', borderRadius: '15px', boxShadow: '0 10px 40px rgba(0,0,0,0.1)', width: '100%', maxWidth: '400px', boxSizing: 'border-box' }}>
               <h2 style={{ color: '#0056b3', marginBottom: '25px', textAlign: 'center', fontSize: '1.8rem' }}>
-                {esRegistroAdmin ? 'Registrar Credencial' : 'Student Login'}
+                Student Login
               </h2>
               
               {errorForm && (
                 <div style={{ backgroundColor: '#ffe5e5', color: '#d9534f', padding: '10px', borderRadius: '5px', marginBottom: '15px', fontSize: '0.9rem', fontWeight: 'bold', textAlign: 'center' }}>
                   {errorForm}
-                </div>
-              )}
-
-              {mensajeExito && (
-                <div style={{ backgroundColor: '#d4edda', color: '#155724', padding: '10px', borderRadius: '5px', marginBottom: '15px', fontSize: '0.9rem', fontWeight: 'bold', textAlign: 'center' }}>
-                  {mensajeExito}
                 </div>
               )}
 
@@ -371,15 +371,8 @@ function App() {
                   <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ccc', boxSizing: 'border-box', fontSize: '1rem' }} />
                 </div>
                 <button type="submit" style={{ backgroundColor: '#0056b3', color: 'white', border: 'none', padding: '14px', borderRadius: '8px', fontWeight: 'bold', fontSize: '1.05rem', cursor: 'pointer', marginTop: '5px' }}>
-                  {esRegistroAdmin ? 'Guardar en Base de Datos' : 'Enter Dashboard'}
+                  Enter Dashboard
                 </button>
-
-                <span 
-                  onClick={() => { setEsRegistroAdmin(!esRegistroAdmin); setErrorForm(''); setMensajeExito(''); }}
-                  style={{ textAlign: 'center', color: '#0056b3', fontSize: '0.9rem', cursor: 'pointer', textDecoration: 'underline', marginTop: '5px' }}
-                >
-                  {esRegistroAdmin ? 'Ya tengo cuenta, ir a Iniciar Sesión' : '¿Primera vez? Crear credencial de prueba'}
-                </span>
               </div>
             </form>
           </div>
